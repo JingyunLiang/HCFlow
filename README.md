@@ -27,7 +27,7 @@ cd HCFlow-master
 pip install -r requirements.txt 
 ```
 
-## Quick Run
+## Quick Run (1 minute)
 To run the code with one command (without preparing data), run this command:
 ```bash
 cd codes
