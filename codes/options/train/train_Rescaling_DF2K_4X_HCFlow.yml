@@ -1,0 +1,127 @@
+#### general settings
+name: 003_DF2K_x4_rescaling_HCFlow
+use_tb_logger: true
+model: HCFlow_Rescaling
+distortion: sr
+scale: 4
+gpu_ids: [0]
+
+
+#### datasets
+datasets:
+  train:
+    name: DF2K_tr
+    mode: GTLQnpy
+    dataroot_GT: /cluster/work/cvl/jinliang_dataset/DIV2K+Flickr2K_decoded/DIV2K+Flickr2K_HR
+    dataroot_LQ: /cluster/work/cvl/jinliang_dataset/DIV2K+Flickr2K_decoded/DIV2K+Flickr2K_LR_bicubic/X4
+
+    use_shuffle: true
+    n_workers: 16
+    batch_size: 16
+    GT_size: 160
+    use_flip: true
+    use_rot: true
+    color: RGB
+
+  val:
+    name: Set5
+    mode: GTLQx
+    dataroot_GT: ../datasets/Set5/HR
+    dataroot_LQ: ../datasets/Set5/LR_bicubic/X4
+
+
+# The optimization may not be stable for rescaling (+-0.1dB). A simple trick: for each stage of learning rate,
+#  resume training from the best model of the previous stage of learning rate.
+#### network structures
+network_G:
+  which_model_G: HCFlowNet_Rescaling
+  in_nc: 3
+  out_nc: 3
+  act_norm_start_step: 100
+
+  flowDownsampler:
+    K: 14
+    L: 2
+    squeeze: haar # better than squeeze2d
+    flow_permutation: none # bettter than invconv
+    flow_coupling: Affine3shift # better than affine
+    nn_module: DenseBlock # better than FCN
+    hidden_channels: 32
+    cond_channels: ~
+    splitOff:
+      enable: true
+      after_flowstep: [6, 6]
+      flow_permutation: invconv
+      flow_coupling: Affine
+      stage1: True
+      feature_extractor: RRDB
+      nn_module: FCN
+      nn_module_last: Conv2dZeros
+      hidden_channels: 64
+      RRDB_nb: [2,1]
+      RRDB_nf: 64
+      RRDB_gc: 16
+
+
+#### path
+path:
+  pretrain_model_G: ~
+  strict_load: true
+  resume_state: auto
+
+#### training settings: learning rate scheme, loss
+train:
+  two_stage_opt: True
+
+  lr_G: !!float 2.5e-4
+  lr_scheme: MultiStepLR
+  weight_decay_G: 0
+  max_grad_clip: 5
+  max_grad_norm: 100
+  beta1: 0.9
+  beta2: 0.99
+  niter: 500000
+  warmup_iter: -1  # no warm up
+  lr_steps: [100000, 200000, 300000, 400000, 450000]
+  lr_gamma: 0.5
+  restarts: ~
+  restart_weights: ~
+  eta_min: !!float 1e-8
+
+  weight_z: !!float 1e-5
+
+  pixel_criterion_lr: l2
+  pixel_weight_lr: !!float 5e-2
+
+  eps_std_reverse: 1.0
+  pixel_criterion_hr: l1
+  pixel_weight_hr: 1.0
+
+  # perceptual loss
+  feature_criterion: l1
+  feature_weight: 0
+
+  # gan loss
+  gan_type: gan  # gan | lsgan | wgangp | ragan (patchgan uses lsgan)
+  gan_weight: 0
+
+  lr_D: 0
+  beta1_D: 0.9
+  beta2_D: 0.99
+  D_update_ratio: 1
+  D_init_iters: 1500
+
+  manual_seed: 0
+  val_freq: !!float 5e3
+
+
+#### validation settings
+val:
+  heats: [0.0, 1.0]
+
+
+#### logger
+logger:
+  print_freq: 200
+  save_checkpoint_freq: !!float 5e3
+

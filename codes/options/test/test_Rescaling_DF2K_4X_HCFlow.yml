@@ -1,0 +1,93 @@
+#### general settings
+name: 003_HCFlow_DF2K_x4_rescaling_test
+suffix: ~
+use_tb_logger: true
+model: HCFlow_Rescaling
+distortion: sr
+scale: 4
+gpu_ids: [0]
+
+
+datasets:
+  test0:
+    name: example
+    mode: GTLQ
+    dataroot_GT: ../datasets/example_general_4X/HR
+    dataroot_LQ: ../datasets/example_general_4X/LR
+
+#  test_1:
+#    name: Set5
+#    mode: GTLQx
+#    dataroot_GT: ../datasets/Set5/HR
+#    dataroot_LQ: ../datasets/Set5/LR_bicubic/X4
+#
+#  test_2:
+#    name: Set14
+#    mode: GTLQx
+#    dataroot_GT: ../datasets/Set14/HR
+#    dataroot_LQ: ../datasets/Set14/LR_bicubic/X4
+#
+#  test_3:
+#    name: BSD100
+#    mode: GTLQx
+#    dataroot_GT: ../datasets/BSD100/HR
+#    dataroot_LQ: ../datasets/BSD100/LR_bicubic/X4
+#
+#  test_4:
+#    name: Urban100
+#    mode: GTLQx
+#    dataroot_GT: ../datasets/Urban100/HR
+#    dataroot_LQ: ../datasets/Urban100/LR_bicubic/X4
+#
+#  test_5:
+#    name: DIV2K-validation
+#    mode: GTLQx
+#    dataroot_GT: ../datasets/DIV2K/HR
+#    dataroot_LQ: ../datasets/DIV2K/LR_bicubic/X4
+
+
+#### network structures
+network_G:
+  which_model_G: HCFlowNet_Rescaling
+  in_nc: 3
+  out_nc: 3
+  act_norm_start_step: 100
+
+  flowDownsampler:
+    K: 14
+    L: 2
+    squeeze: haar # better than squeeze2d
+    flow_permutation: none # bettter than invconv
+    flow_coupling: Affine3shift # better than affine
+    nn_module: DenseBlock # better than FCN
+    hidden_channels: 32
+    cond_channels: ~
+    splitOff:
+      enable: true
+      after_flowstep: [6, 6]
+      flow_permutation: invconv
+      flow_coupling: Affine
+      stage1: True
+      feature_extractor: RRDB
+      nn_module: FCN
+      nn_module_last: Conv2dZeros
+      hidden_channels: 64
+      RRDB_nb: [2,1]
+      RRDB_nf: 64
+      RRDB_gc: 16
+
+
+
+#### validation settings
+val:
+  heats: [1.0]
+  n_sample: 1
+
+
+path:
+  strict_load: true
+  load_submodule: ~
+  pretrain_model_G: ../experiments/pretrained_models/Rescaling_DF2K_X4_HCFlow.pth
+
+
+

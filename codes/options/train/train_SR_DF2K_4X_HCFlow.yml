@@ -1,0 +1,124 @@
+#### general settings
+name: 001_DF2K_x4_bicSR_HCFlow
+use_tb_logger: true
+model: HCFlow_SR
+distortion: sr
+scale: 4
+quant: 64
+gpu_ids: [0]
+
+
+#### datasets
+datasets:
+  train:
+    name: DF2K_tr
+    mode: LRHR_PKL
+    dataroot_GT: ../datasets/srflow_datasets/DF2K-tr.pklv4
+    dataroot_LQ: ../datasets/srflow_datasets/DF2K-tr_X4.pklv4
+
+    use_shuffle: true
+    n_workers: 16
+    batch_size: 16
+    GT_size: 160
+    use_flip: true
+    color: RGB
+  val:
+    name: Set5
+    mode: GTLQx
+    dataroot_GT: ../datasets/Set5/HR
+    dataroot_LQ: ../datasets/Set5/LR_bicubic/X4
+
+
+#### network structures
+network_G:
+  which_model_G: HCFlowNet_SR
+  in_nc: 3
+  out_nc: 3
+  act_norm_start_step: 100
+
+  flowDownsampler:
+    K: 26
+    L: 2
+    flow_permutation: invconv
+    flow_coupling: Affine
+    nn_module: FCN
+    hidden_channels: 64
+    cond_channels: ~
+    splitOff:
+      enable: true
+      after_flowstep: [13, 13]
+      flow_permutation: invconv
+      flow_coupling: Affine
+      nn_module: FCN
+      nn_module_last: Conv2dZeros
+      hidden_channels: 64
+      RRDB_nb: [7, 7]
+      RRDB_nf: 64
+      RRDB_gc: 32
+
+network_D:
+  which_model_D: discriminator_vgg_160
+  in_nc: 3
+  nf: 64
+
+
+#### path
+path:
+  pretrain_model_G: ~
+  strict_load: true
+  resume_state: auto
+
+
+#### training settings: learning rate scheme, loss
+train:
+  lr_G: !!float 2.5e-4
+  lr_scheme: MultiStepLR
+  weight_decay_G: 0
+  max_grad_clip: 5
+  max_grad_norm: 100
+  beta1: 0.9
+  beta2: 0.99
+  niter: 300000
+  warmup_iter: -1  # no warm up
+  lr_steps_rel: [0.5,0.75,0.9,0.95]
+  lr_gamma: 0.5
+  restarts: ~
+  restart_weights: ~
+  eta_min: !!float 1e-8
+
+  nll_weight: 1
+
+  # pixel loss
+  pixel_criterion_hr: l1
+  pixel_weight_hr: 0
+
+  # perceptual loss
+  eps_std_reverse: 0.9
+  feature_criterion: l1
+  feature_weight: 0
+
+  # gan loss
+  gan_type: gan  # gan | lsgan | wgangp | ragan (patchgan uses lsgan)
+  gan_weight: 0
+
+  lr_D: 0
+  beta1_D: 0.9
+  beta2_D: 0.99
+  D_update_ratio: 1
+  D_init_iters: 1500
+
+  manual_seed: 0
+  val_freq: !!float 5e3
+
+
+#### validation settings
+val:
+  heats: [0.0, 0.9]
+  n_sample: 3
+
+
+#### logger
+logger:
+  print_freq: 200
+  save_checkpoint_freq: !!float 5e3
+

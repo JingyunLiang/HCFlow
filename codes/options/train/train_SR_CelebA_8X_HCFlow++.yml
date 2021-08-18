@@ -1,0 +1,126 @@
+#### general settings
+name: 002_CelebA_x8_bicSR_HCFlow++
+use_tb_logger: true
+model: HCFlow_SR
+distortion: sr
+scale: 8
+quant: 256
+gpu_ids: [0]
+
+
+#### datasets
+datasets:
+  train:
+    name: CelebA_160_tr
+    mode: LRHR_PKL
+    dataroot_GT: /cluster/work/cvl/sr_datasets/srflow/celebA/CelebAHq_160_MBic_tr.pklv4
+    dataroot_LQ: /cluster/work/cvl/sr_datasets/srflow/celebA/CelebAHq_160_MBic_tr_X8.pklv4
+
+    use_shuffle: true
+    n_workers: 16
+    batch_size: 16
+    GT_size: 160
+    use_flip: true
+    color: RGB
+  val:
+    name: CelebA_160_va
+    mode: LRHR_PKL
+    dataroot_GT: /cluster/work/cvl/sr_datasets/srflow/celebA/CelebAHq_160_MBic_va.pklv4
+    dataroot_LQ: /cluster/work/cvl/sr_datasets/srflow/celebA/CelebAHq_160_MBic_va_X8.pklv4
+    n_max: 20
+
+
+#### network structures
+network_G:
+  which_model_G: HCFlowNet_SR
+  in_nc: 3
+  out_nc: 3
+  act_norm_start_step: 100
+
+  flowDownsampler:
+    K: 26
+    L: 3
+    flow_permutation: invconv
+    flow_coupling: Affine
+    nn_module: FCN
+    hidden_channels: 64 # 64 and 128 are similar
+    cond_channels: ~ # affine coupling in the main trunk, testo 3 or None
+    splitOff:
+      enable: true
+      after_flowstep: [13, 13, 13]
+      flow_permutation: invconv
+      flow_coupling: Affine
+      stage1: True
+      nn_module: FCN
+      nn_module_last: Conv2dZeros
+      hidden_channels: 64
+      RRDB_nb: [5, 5]
+      RRDB_nf: 64
+      RRDB_gc: 32
+
+network_D:
+  which_model_D: discriminator_vgg_160
+  in_nc: 3
+  nf: 64
+
+
+#### path
+path:
+  pretrain_model_G: ../experiments/pretrained_models/SR_CelebA_X8_HCFlow.pth
+  strict_load: true
+  resume_state: auto
+
+
+#### training settings: learning rate scheme, loss
+train:
+  lr_G: !!float 1.25e-5
+  lr_scheme: MultiStepLR
+  weight_decay_G: 0
+  max_grad_clip: 5
+  max_grad_norm: 100
+  beta1: 0.9
+  beta2: 0.99
+  niter: 50000
+  warmup_iter: -1  # no warm up
+  lr_steps: [20000, 40000]
+  lr_gamma: 0.5
+  restarts: ~
+  restart_weights: ~
+  eta_min: !!float 1e-8
+
+  nll_weight: !!float 2e-3
+
+  # pixel loss
+  pixel_criterion_hr: l1
+  pixel_weight_hr: 1.0
+
+  # perceptual loss
+  eps_std_reverse: 0.8
+  feature_criterion: l1
+  feature_weight: !!float 5e-2 # balance diversity and lpips
+
+  # gan loss
+  gan_type: gan  # gan | lsgan | wgangp | ragan (patchgan uses lsgan)
+  gan_weight: !!float 5e-1
+
+  lr_D: !!float 5e-5
+  beta1_D: 0.9
+  beta2_D: 0.99
+  D_update_ratio: 1
+  D_init_iters: 1500
+
+  manual_seed: 0
+  val_freq: !!float 5e3
+
+
+#### validation settings
+val:
+  heats: [0.0, 0.8] # 0.8 has best visual quality for face SR
+  n_sample: 3
+
+
+#### logger
+logger:
+  print_freq: 200
+  save_checkpoint_freq: !!float 5e3
+

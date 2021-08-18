@@ -1,0 +1,80 @@
+#### general settings
+name: 002_HCFlow_CelebA_x8_bicSR_test
+suffix: ~
+use_tb_logger: true
+model: HCFlow_SR
+distortion: sr
+scale: 8
+quant: 256
+gpu_ids: [0]
+
+
+#### datasets
+datasets:
+  test0:
+    name: example
+    mode: GTLQ
+    dataroot_GT: ../datasets/example_face_4X/HR
+    dataroot_LQ: ../datasets/example_face_4X/LR
+
+#  val:
+#    name: SR_CelebA_8X_160_val
+#    mode: LRHR_PKL
+#    dataroot_GT: /cluster/work/cvl/sr_datasets/srflow/celebA/CelebAHq_160_MBic_va.pklv4
+#    dataroot_LQ: /cluster/work/cvl/sr_datasets/srflow/celebA/CelebAHq_160_MBic_va_X8.pklv4
+#    n_max: 20
+#
+#  test:
+#    name: SR_CelebA_8X_160_test
+#    mode: LRHR_PKL
+#    dataroot_GT: /cluster/work/cvl/sr_datasets/srflow/celebA/CelebAHq_160_MBic_te.pklv4
+#    dataroot_LQ: /cluster/work/cvl/sr_datasets/srflow/celebA/CelebAHq_160_MBic_te_X8.pklv4
+#    n_max: 5000
+
+
+
+
+#### network structures
+network_G:
+  which_model_G: HCFlowNet_SR
+  in_nc: 3
+  out_nc: 3
+  act_norm_start_step: 100
+
+  flowDownsampler:
+    K: 26
+    L: 3
+    flow_permutation: invconv
+    flow_coupling: Affine
+    nn_module: FCN
+    hidden_channels: 64
+    cond_channels: ~
+    splitOff:
+      enable: true
+      after_flowstep: [13, 13, 13]
+      flow_permutation: invconv
+      flow_coupling: Affine
+      stage1: True
+      nn_module: FCN
+      nn_module_last: Conv2dZeros
+      hidden_channels: 64
+      RRDB_nb: [5, 5]
+      RRDB_nf: 64
+      RRDB_gc: 32
+
+
+
+#### validation settings
+val:
+  heats: [0, 0.8]
+  n_sample: 1
+
+
+path:
+  strict_load: true
+  load_submodule: ~
+#  pretrain_model_G: ../experiments/pretrained_models/SR_CelebA_X8_HCFlow.pth
+#  pretrain_model_G: ../experiments/pretrained_models/SR_CelebA_X8_HCFlow+.pth
+  pretrain_model_G: ../experiments/pretrained_models/SR_CelebA_X8_HCFlow++.pth
+
+
