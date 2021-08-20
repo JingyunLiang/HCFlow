@@ -178,6 +178,8 @@ class HCFlowSRModel(BaseModel):
         self.var_L = data['LQ'].to(self.device)  # LQ
         if need_GT:
             self.real_H = data['GT'].to(self.device)  # GT
+        else:
+            self.real_H = None
 
     def optimize_parameters(self, step):
         # special initialization for actnorm; don't initialize when fine-tuning
@@ -296,9 +298,11 @@ class HCFlowSRModel(BaseModel):
         self.fake_H = {}
 
         with torch.no_grad():
-            # hr->lr+z, calculate nll
-            self.fake_L_from_H, nll = self.netG(hr=self.real_H, lr=self.var_L, u=None, reverse=False, training=False)
-            # nll = torch.zeros(1)
+            if self.real_H is None:
+                nll = torch.zeros(1)
+            else:
+                # hr->lr+z, calculate nll
+                self.fake_L_from_H, nll = self.netG(hr=self.real_H, lr=self.var_L, u=None, reverse=False, training=False)
 
             # lr+z->hr
             for heat in self.heats:
