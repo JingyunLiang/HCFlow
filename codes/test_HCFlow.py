@@ -13,9 +13,7 @@ from data import create_dataset, create_dataloader
 from models import create_model
 import lpips
 
-os.environ['CUDA_HOME'] = '/scratch_net/rind/cuda-11.0'
-os.environ['LD_LIBRARY_PATH'] = '/scratch_net/rind/cuda-11.0/lib64'
-os.environ['PATH'] = '/scratch_net/rind/cuda-11.0/bin'
+
 
 #### options
 parser = argparse.ArgumentParser() # test_SR_CelebA_8X_HCFlow test_SR_DF2K_4X_HCFlow test_Rescaling_DF2K_4X_HCFlow
@@ -77,30 +75,14 @@ for test_loader in test_loaders:
     for test_data in test_loader:
         idx += 1
 
-        real_image = True if test_loader.dataset.opt['dataroot_GT'] is None else False
-        generate_online = True if test_loader.dataset.opt['dataroot_GT'] is not None and test_loader.dataset.opt[
-            'dataroot_LQ'] is None else False
+        real_image = True if test_loader.dataset.opt['mode'] == 'LQ' else False
         img_path = test_data['LQ_path'][0] if real_image else test_data['GT_path'][0]
         img_name = os.path.splitext(os.path.basename(img_path))[0]
 
-        model.feed_data(test_data)
+        model.feed_data(test_data, need_GT=not real_image)
         nll = model.test()
         avg_nll += nll
-        visuals = model.get_current_visuals()
-
-        # calculate PSNR for LR
-        gt_img_lr = util.tensor2img(visuals['LQ'])
-        sr_img_lr = util.tensor2img(visuals['LQ_fromH'])
-        # save_img_path = os.path.join(dataset_dir, 'LR_{:s}_{:.1f}_{:d}.png'.format(img_name, 1.0, 0))
-        # util.save_img(sr_img_lr, save_img_path)
-        gt_img_lr = gt_img_lr / 255.
-        sr_img_lr = sr_img_lr / 255.
-
-        lr_psnr, lr_ssim, lr_psnr_y, lr_ssim_y = util.calculate_psnr_ssim(gt_img_lr, sr_img_lr, 0)
-        avg_lr_psnr += lr_psnr
-        avg_lr_ssim += lr_ssim
-        avg_lr_psnr_y += lr_psnr_y
-        avg_lr_ssim_y += lr_ssim_y
+        visuals = model.get_current_visuals(need_GT=not real_image)
 
         # deal with real-world data (just save)
         if real_image:
@@ -108,22 +90,29 @@ for test_loader in test_loaders:
                 for sample in range(opt['val']['n_sample']):
                     sr_img = util.tensor2img(visuals['SR', heat, sample])
 
-                    # deal with the image margins for real images
-                    if opt['scale'] == 4:
-                        real_crop = 3
-                    elif opt['scale'] == 2:
-                        real_crop = 6
-                    elif opt['scale'] == 1:
-                        real_crop = 11
-                    assert real_crop * opt['scale'] * 2 > opt['kernel_size']
-                    sr_img = sr_img[real_crop * opt['scale']:-real_crop * opt['scale'],
-                             real_crop * opt['scale']:-real_crop * opt['scale'], :]
-                    save_img_path = os.path.join(dataset_dir, 'SR_{:s}_{:.1f}_{:d}.png'.
-                                             format(img_name, heat, sample))
+                    if opt['suffix']:
+                        save_img_path = os.path.join(dataset_dir, 'SR_{:s}_{:.1f}_{:d}_{:s}.png'.format(img_name, heat, sample, opt['suffix']))
+                    else:
+                        save_img_path = os.path.join(dataset_dir, 'SR_{:s}_{:.1f}_{:d}.png'.format(img_name, heat, sample))
                     util.save_img(sr_img, save_img_path)
 
         # deal with synthetic data (calculate psnr and save)
         else:
+
+            # calculate PSNR for LR
+            gt_img_lr = util.tensor2img(visuals['LQ'])
+            sr_img_lr = util.tensor2img(visuals['LQ_fromH'])
+            # save_img_path = os.path.join(dataset_dir, 'LR_{:s}_{:.1f}_{:d}.png'.format(img_name, 1.0, 0))
+            # util.save_img(sr_img_lr, save_img_path)
+            gt_img_lr = gt_img_lr / 255.
+            sr_img_lr = sr_img_lr / 255.
+
+            lr_psnr, lr_ssim, lr_psnr_y, lr_ssim_y = util.calculate_psnr_ssim(gt_img_lr, sr_img_lr, 0)
+            avg_lr_psnr += lr_psnr
+            avg_lr_ssim += lr_ssim
+            avg_lr_psnr_y += lr_psnr_y
+            avg_lr_ssim_y += lr_ssim_y
+
             for heat in opt['val']['heats']:
                 psnr = 0.0
                 ssim = 0.0
@@ -145,9 +134,8 @@ for test_loader in test_loaders:
 
                     gt_img = util.tensor2img(gt_img)  # uint8
                     sr_img = util.tensor2img(sr_img)  # uint8
-                    suffix = opt['suffix']
-                    if suffix:
-                        save_img_path = os.path.join(dataset_dir, 'SR_{:s}_{:.1f}_{:d}_{:s}.png'.format(img_name, heat, sample, suffix))
+                    if opt['suffix']:
+                        save_img_path = os.path.join(dataset_dir, 'SR_{:s}_{:.1f}_{:d}_{:s}.png'.format(img_name, heat, sample, opt['suffix']))
                     else:
                         save_img_path = os.path.join(dataset_dir, 'SR_{:s}_{:.1f}_{:d}.png'.format(img_name, heat, sample))
                     util.save_img(sr_img, save_img_path)
