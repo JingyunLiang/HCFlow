@@ -25,19 +25,19 @@ datasets:
 
 #  test_2:
 #    name: Set14
-#    mode: GTLQ
+#    mode: GTLQx
 #    dataroot_GT: ../datasets/Set14/HR
 #    dataroot_LQ: ../datasets/Set14/LR_bicubic/X4
 #
 #  test_3:
 #    name: BSD100
-#    mode: GTLQ
+#    mode: GTLQx
 #    dataroot_GT: ../datasets/BSD100/HR
 #    dataroot_LQ: ../datasets/BSD100/LR_bicubic/X4
 #
 #  test_4:
 #    name: Urban100
-#    mode: GTLQ
+#    mode: GTLQx
 #    dataroot_GT: ../datasets/Urban100/HR
 #    dataroot_LQ: ../datasets/Urban100/LR_bicubic/X4
 #
