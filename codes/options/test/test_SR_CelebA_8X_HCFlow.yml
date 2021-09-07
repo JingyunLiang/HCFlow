@@ -12,10 +12,10 @@ gpu_ids: [0]
 #### datasets
 datasets:
   test0:
-    name: example
+    name: example_face_8X
     mode: GTLQ
-    dataroot_GT: ../datasets/example_face_4X/HR
-    dataroot_LQ: ../datasets/example_face_4X/LR
+    dataroot_GT: ../datasets/example_face_8X/HR
+    dataroot_LQ: ../datasets/example_face_8X/LR
 
 #  val:
 #    name: SR_CelebA_8X_160_val
