@@ -32,13 +32,13 @@ To run the code with one command (without preparing data), run this command:
 ```bash
 cd codes
 # face image SR
-python test_HCFLow.py --opt options/test/test_SR_CelebA_8X_HCFlow.yml
+python test_HCFlow.py --opt options/test/test_SR_CelebA_8X_HCFlow.yml
 
 # general image SR
-python test_HCFLow.py --opt options/test/test_SR_DF2K_4X_HCFlow.yml
+python test_HCFlow.py --opt options/test/test_SR_DF2K_4X_HCFlow.yml
 
 # image rescaling
-python test_HCFLow.py --opt options/test/test_Rescaling_DF2K_4X_HCFlow.yml
+python test_HCFlow.py --opt options/test/test_Rescaling_DF2K_4X_HCFlow.yml
 ```
 ---
 
@@ -54,13 +54,13 @@ To train HCFlow for general image SR/ face image SR/ image rescaling, run this c
 cd codes
 
 # face image SR
-python train_HCFLow.py --opt options/train/train_SR_CelebA_8X_HCFlow.yml
+python train_HCFlow.py --opt options/train/train_SR_CelebA_8X_HCFlow.yml
 
 # general image SR
-python train_HCFLow.py --opt options/train/train_SR_DF2K_4X_HCFlow.yml
+python train_HCFlow.py --opt options/train/train_SR_DF2K_4X_HCFlow.yml
 
 # image rescaling
-python train_HCFLow.py --opt options/train/train_Rescaling_DF2K_4X_HCFlow.yml
+python train_HCFlow.py --opt options/train/train_Rescaling_DF2K_4X_HCFlow.yml
 ```
 All trained models can be downloaded from [here](https://github.com/JingyunLiang/HCFlow/releases/tag/v0.0).
 
