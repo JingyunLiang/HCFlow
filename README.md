@@ -87,7 +87,7 @@ We achieved state-of-the-art performance on general image SR, face image SR and 
 For more results, please refer to the [paper](https://arxiv.org/abs/2108.05301) and [supp](https://github.com/JingyunLiang/HCFlow/releases/tag/v0.0) for details. 
 
 ## Citation
-    @inproceedings{liang21hcflow,
+    @inproceedings{liang21hierarchical,
       title={Hierarchical Conditional Flow: A Unified Framework for Image Super-Resolution and Image Rescaling},
       author={Liang, Jingyun and Lugmayr, Andreas and Zhang, Kai and Danelljan, Martin and Van Gool, Luc and Timofte, Radu},
       booktitle={IEEE International Conference on Computer Vision},
