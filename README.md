@@ -90,7 +90,7 @@ For more results, please refer to the [paper](https://arxiv.org/abs/2108.05301) 
     @inproceedings{liang21hcflow,
       title={Hierarchical Conditional Flow: A Unified Framework for Image Super-Resolution and Image Rescaling},
       author={Liang, Jingyun and Lugmayr, Andreas and Zhang, Kai and Danelljan, Martin and Van Gool, Luc and Timofte, Radu},
-      booktitle={IEEE Conference on International Conference on Computer Vision},
+      booktitle={IEEE International Conference on Computer Vision},
       year={2021}
     }
 
