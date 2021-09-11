@@ -26,28 +26,57 @@ from models import create_model
 
 class Predictor(cog.Predictor):
     def setup(self):
-        self.option_yaml_general = 'codes/options/test/test_SR_DF2K_4X_HCFlow.yml'
-        self.option_yaml_celab = 'codes/options/test/test_SR_CelebA_8X_HCFlow.yml'
-        self.general_model = 'experiments/pretrained_models/SR_DF2K_X4_HCFlow++.pth'
-        self.celeb_model = 'experiments/pretrained_models/SR_CelebA_X8_HCFlow++.pth'
+
+        option_yaml = {
+            'celeb': 'codes/options/test/test_SR_CelebA_8X_HCFlow.yml',
+            'general': 'codes/options/test/test_SR_DF2K_4X_HCFlow.yml'
+        }
+
+        model_path = {
+            'celeb': 'experiments/pretrained_models/SR_CelebA_X8_HCFlow++.pth',
+            'general': 'experiments/pretrained_models/SR_DF2K_X4_HCFlow++.pth'
+        }
+
+        parser_celeb = argparse.ArgumentParser()  # test_SR_CelebA_8X_HCFlow test_SR_DF2K_4X_HCFlow test_Rescaling_DF2K_4X_HCFlow
+        parser_general = argparse.ArgumentParser()
+        parser_celeb.add_argument('--opt', type=str, default=option_yaml['celeb'],
+                                  help='Path to options YMAL file.')
+        parser_celeb.add_argument('--save_kernel', action='store_true', default=False, help='Save Kernel Esimtation.')
+        parser_general.add_argument('--opt', type=str, default=option_yaml['general'],
+                                    help='Path to options YMAL file.')
+        parser_general.add_argument('--save_kernel', action='store_true', default=False, help='Save Kernel Esimtation.')
+        args_celeb = parser_celeb.parse_args('')
+        args_general = parser_general.parse_args('')
+        self.opts = {
+            'celeb': option.parse(args_celeb.opt, is_train=False),
+            'general': option.parse(args_general.opt, is_train=False)
+        }
+
+        self.opts['celeb'] = option.dict_to_nonedict(self.opts['celeb'])
+        self.opts['general'] = option.dict_to_nonedict(self.opts['general'])
+
+        # modify this because cog runs from a different directory
+        self.opts['celeb']['path']['pretrain_model_G'] = model_path['celeb']
+        self.opts['general']['path']['pretrain_model_G'] = model_path['general']
+
+        # for super resolution on cog no need GT
+        self.opts['celeb']['datasets']['test0']['dataroot_GT'] = None
+        self.opts['celeb']['datasets']['test0']['mode'] = 'LQ'
+        self.opts['general']['datasets']['test0']['dataroot_GT'] = None
+        self.opts['general']['datasets']['test0']['mode'] = 'LQ'
+
+        self.models = {
+            'celeb': create_model(self.opts['celeb']),
+            'general': create_model(self.opts['general'])
+        }
+        self.loss_fn_alex = lpips.LPIPS(net='alex').to('cuda')
 
     @cog.input("image", type=Path, help="Low resolution image")
-    @cog.input("model", type=str, options=['celeb', 'general'], help="celeb photo or general image", default='general')
-    def predict(self, image, model='general'):
-        #### options
-        parser = argparse.ArgumentParser()  # test_SR_CelebA_8X_HCFlow test_SR_DF2K_4X_HCFlow test_Rescaling_DF2K_4X_HCFlow
+    @cog.input("model_type", type=str, options=['celeb', 'general'], help="celeb photo or general image", default='celeb')
+    def predict(self, image, model_type='celeb'):
 
-        option_yaml = self.option_yaml_celab if model == 'celeb' else self.option_yaml_general
-
-        parser.add_argument('--opt', type=str, default=option_yaml,
-                            help='Path to options YMAL file.')
-        parser.add_argument('--save_kernel', action='store_true', default=False, help='Save Kernel Esimtation.')
-
-        args = parser.parse_args('')
-        opt = option.parse(args.opt, is_train=False)
-        # for super resolution on cog no need GT
-        opt['datasets']['test0']['dataroot_GT'] = None
-        opt['datasets']['test0']['mode'] = 'LQ'
+        model = self.models[model_type]
+        opt = self.opts[model_type]
 
         # copy input image to temp dir and assign to opt
         input_dir = 'input/cog_temp'
@@ -55,10 +84,6 @@ class Predictor(cog.Predictor):
         input_path = os.path.join(input_dir, os.path.basename(image))
         shutil.copy(str(image), input_path)
         opt['datasets']['test0']['dataroot_LQ'] = input_dir
-
-        opt['path']['pretrain_model_G'] = self.celeb_model if model == 'celeb' else self.general_model
-        opt = option.dict_to_nonedict(opt)
-        device_id = torch.cuda.current_device()
 
         #### mkdir and logger
         util.mkdirs((path for key, path in opt['path'].items() if not key == 'experiments_root'
@@ -78,12 +103,6 @@ class Predictor(cog.Predictor):
             test_loader = create_dataloader(test_set, dataset_opt)
             logger.info('Number of test images in [{:s}]: {:d}'.format(dataset_opt['name'], len(test_set)))
             test_loaders.append(test_loader)
-
-        # load pretrained model by default
-        model = create_model(opt)
-        loss_fn_alex = lpips.LPIPS(net='alex').to('cuda')
-        crop_border = opt['crop_border'] if opt['crop_border'] else opt['scale']
-
 
         for test_loader in test_loaders:
             test_set_name = test_loader.dataset.opt['name']
@@ -172,7 +191,7 @@ class Predictor(cog.Predictor):
                             sr_img = visuals['SR', heat, sample]
                             sr_img_list.append(sr_img.unsqueeze(0) * 255)
                             lpips_dict[(idx, heat, sample)] = float(
-                                loss_fn_alex(2 * gt_img.to('cuda') - 1, 2 * sr_img.to('cuda') - 1).cpu())
+                                self.loss_fn_alex(2 * gt_img.to('cuda') - 1, 2 * sr_img.to('cuda') - 1).cpu())
                             lpips_value += lpips_dict[(idx, heat, sample)]
 
                             gt_img = util.tensor2img(gt_img)  # uint8
@@ -293,6 +312,7 @@ class Predictor(cog.Predictor):
         img_out = cv2.imread(img_list[-1])
         cv2.imwrite(str(out_path), img_out)
         clean_folder(input_dir)
+        clean_folder(result_dir)
 
         return out_path
 
