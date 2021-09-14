@@ -1,0 +1,3 @@
+#!/bin/sh
+wget https://github.com/JingyunLiang/HCFlow/releases/download/v0.0/SR_DF2K_X4_HCFlow++.pth -P ./experiments/pretrained_models
+wget https://github.com/JingyunLiang/HCFlow/releases/download/v0.0/SR_CelebA_X8_HCFlow++.pth -P ./experiments/pretrained_models
